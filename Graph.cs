@@ -1,129 +1,178 @@
 class Graph<T>
 {
-    private GraphNode<T> head = null;
-    private int length = 0;
+    private LinkedList<T> nodeList;
+    private LinkedList<LinkedList<GraphEdge<T>>> edgeTable;
 
-    public void AddNode(T value, double weight)
+    public Graph()
     {
-        GraphNode<T> graphNode = new GraphNode<T>(value);
-        if(this.head == null)
-        {
-            this.head = graphNode;
-        }
-        else
-        {
-            GraphNode<T> ptr = this.GetGraphNode(this.length - 1);
-            ptr.MakeOutGraphEdge(graphNode, weight);
-        }
-        this.length++;
+        this.nodeList = new LinkedList<T>();
+        this.edgeTable = new LinkedList<LinkedList<GraphEdge<T>>>();
     }
 
-    public void InsertNode(int index, T value, double weight)
+    public void AddNode(T value)
     {
-        GraphNode<T> graphNode = new GraphNode<T>(value);
-        if(index == 0)
-        {
-            graphNode.MakeOutGraphEdge(this.head, weight);
-            this.head = graphNode;
-        }
-        else
-        {
-            GraphNode<T> ptr = this.GetGraphNode(index - 1);
-            ptr.InsertOutGraphEdge(0, graphNode, weight);
-        }
-        this.length++;
+        this.nodeList.Add(value);
+        this.edgeTable.Add(new LinkedList<GraphEdge<T>>());
     }
 
-    //  Depth-frist traverse.
-    private GraphNode<T> Traverse(GraphNode<T> ptr, ref int iteration, ref LinkedList<GraphNode<T>> visitedNodeList)
+    public void InsertNode(int index, T value)
     {
-        visitedNodeList.Add(ptr);
+        this.nodeList.Insert(index, value);
+        this.edgeTable.Insert(index, new LinkedList<GraphEdge<T>>());
+
+        LinkedList<GraphEdge<T>> graphEdgeList;
+        GraphEdge<T> graphEdge;
+        for(int i=0; i<this.edgeTable.GetLength(); i++)
+        {
+            graphEdgeList = this.edgeTable.Get(i);
+            for(int j=0; j<graphEdgeList.GetLength(); j++)
+            {
+                graphEdge = graphEdgeList.Get(j);
+                if(graphEdge.GetDstIndex() >= index)
+                {
+                    graphEdge.SetDstIndex(graphEdge.GetDstIndex() + 1);
+                }
+            }
+        }
+    }
+
+    public void RemoveNode(int index)
+    {
+        this.nodeList.Remove(index);
+        this.edgeTable.Remove(index);
+
+        LinkedList<GraphEdge<T>> graphEdgeList;
+        LinkedList<GraphEdge<T>> newGraphEdgeList;
+        GraphEdge<T> graphEdge;
+        for(int i=0; i<this.edgeTable.GetLength(); i++)
+        {
+            graphEdgeList = this.edgeTable.Get(i);
+            newGraphEdgeList = new LinkedList<GraphEdge<T>>();
+            for(int j=0; j<graphEdgeList.GetLength(); j++)
+            {
+                graphEdge = graphEdgeList.Get(j);
+                if(graphEdge.GetDstIndex() < index)
+                {
+                    newGraphEdgeList.Add(new GraphEdge<T>(graphEdge.GetDstIndex(), graphEdge.GetWeight()));
+                }
+                else if(graphEdge.GetDstIndex() > index)
+                {
+                    newGraphEdgeList.Add(new GraphEdge<T>(graphEdge.GetDstIndex() - 1, graphEdge.GetWeight()));
+                }
+            }
+
+            this.edgeTable.Remove(i);
+            this.edgeTable.Insert(i, newGraphEdgeList);
+        }
+    }
+
+    public void AddEdge(int srcIndex, int dstIndex, double weight)
+    {
+        GraphEdge<T> edge = new GraphEdge<T>(dstIndex, weight);
+        this.edgeTable.Get(srcIndex).Add(edge);
+    }
+
+    public void InsertEdge(int srcIndex, int dstIndex, int edgeIndex, double weight)
+    {
+        GraphEdge<T> edge = new GraphEdge<T>(dstIndex, weight);
+        this.edgeTable.Get(srcIndex).Insert(edgeIndex, edge);
+    }
+
+    public void RemoveEdge(int srcIndex, int edgeIndex)
+    {
+        this.edgeTable.Get(srcIndex).Remove(edgeIndex);
+    }
+
+    private void DepthFirstTraverse(int nodeIndex, ref int iteration, ref LinkedList<int> visitedNodeIndexList)
+    {
+        visitedNodeIndexList.Add(nodeIndex);
+        iteration--;
 
         if(iteration <= 0)
         {
-            return ptr;
+            return;
+        }
+
+        LinkedList<GraphEdge<T>> graphEdgeList = this.edgeTable.Get(nodeIndex);
+        for(int i=0; i<graphEdgeList.GetLength(); i++)
+        {
+            int nextNodeIndex = graphEdgeList.Get(i).GetDstIndex();
+            bool isVisited = false;
+            for(int j=0; j<visitedNodeIndexList.GetLength(); j++)
+            {
+                if(nextNodeIndex == visitedNodeIndexList.Get(j))
+                {
+                    isVisited = true;
+                    break;
+                }
+            }
+
+            if(isVisited)
+            {
+                continue;
+            }
+            
+            this.DepthFirstTraverse(nextNodeIndex, ref iteration, ref visitedNodeIndexList);
+        }
+    }
+
+    public LinkedList<T> GetAllNode()
+    {
+        int nodeIndex = 0;
+        int iteration = this.GetNodeCount();
+        LinkedList<int> visitedNodeIndexList = new LinkedList<int>();
+
+        while(nodeIndex < this.GetNodeCount() && iteration > 0)
+        {
+            this.DepthFirstTraverse(nodeIndex, ref iteration, ref visitedNodeIndexList);
+            nodeIndex++;
         }
         
-        GraphNode<T> nextPtr;
-
-        //  Recursive across outgoing graph edges.
-        LinkedList<GraphEdge<T>> ptrOutGraphEdge = ptr.GetOutGraphEdge();
-        for(int i=0; i<ptrOutGraphEdge.GetLength(); i++)
+        LinkedList<T> nodeValueList = new LinkedList<T>();
+        for(int i=0; i<visitedNodeIndexList.GetLength(); i++)
         {
-            nextPtr = ptrOutGraphEdge.Get(i).GetDst();
-            
-            bool isVisited = false;
-            for(int j=0; j<visitedNodeList.GetLength(); j++)
-            {
-                if(visitedNodeList.Get(j) == nextPtr)
-                {
-                    isVisited = true;
-                    break;
-                }
-            }
-
-            if(isVisited)
-            {
-                continue;
-            }
-
-            iteration--;
-            ptr = this.Traverse(nextPtr, ref iteration, ref visitedNodeList);
-
-            if(iteration <= 0)
-            {
-                return ptr;
-            }
+            nodeValueList.Add(this.nodeList.Get(visitedNodeIndexList.Get(i)));
         }
 
-        //  Recursive across incoming graph edges.
-        LinkedList<GraphEdge<T>> ptrInGraphEdge = ptr.GetInGraphEdge();
-        for(int i=0; i<ptrInGraphEdge.GetLength(); i++)
+        return nodeValueList;
+    }
+
+    public T GetNode(int index)
+    {
+        return this.nodeList.Get(index);
+    }
+
+    public int GetNodeCount()
+    {
+        return this.nodeList.GetLength();
+    }
+
+    public int GetEdgeCount()
+    {
+        int edgeCount = 0;
+        for(int i=0; i<this.edgeTable.GetLength(); i++)
         {
-            nextPtr = ptrInGraphEdge.Get(i).GetDst();
-            
-            bool isVisited = false;
-            for(int j=0; j<visitedNodeList.GetLength(); j++)
-            {
-                if(visitedNodeList.Get(j) == nextPtr)
-                {
-                    isVisited = true;
-                    break;
-                }
-            }
-
-            if(isVisited)
-            {
-                continue;
-            }
-
-            iteration--;
-            ptr = this.Traverse(nextPtr, ref iteration, ref visitedNodeList);
-
-            if(iteration <= 0)
-            {
-                return ptr;
-            }
+            edgeCount += this.edgeTable.Get(i).GetLength();
         }
 
-        return ptr;
+        return edgeCount;
     }
 
-    private GraphNode<T> GetGraphNode(int index)
+    public override string ToString()
     {
-        GraphNode<T> ptr = this.head;
-        int iteration = index;
-        LinkedList<GraphNode<T>> visitedNodeList = new LinkedList<GraphNode<T>>();
-        return this.Traverse(ptr, ref iteration, ref visitedNodeList);
-    }
+        string msg = "";
 
-    public T Get(int index)
-    {
-        return this.GetGraphNode(index).GetValue();
-    }
-
-    public int GetLength()
-    {
-        return this.length;
+        LinkedList<GraphEdge<T>> graphEdgeList;
+        for(int i=0; i<this.nodeList.GetLength(); i++)
+        {
+            msg += string.Format(" {0}\n", this.GetNode(i));
+            graphEdgeList = this.edgeTable.Get(i);
+            for(int j=0; j<graphEdgeList.GetLength(); j++)
+            {
+                msg += string.Format("  --{0}--> {1}\n", graphEdgeList.Get(j).GetWeight(), this.GetNode(graphEdgeList.Get(j).GetDstIndex()));
+            }
+        }
+        msg = string.Format("Graph(\n{0}\n)", msg);
+        return msg;
     }
 }

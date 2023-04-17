@@ -1,24 +1,17 @@
 class GraphEdge<T>
 {
-    private GraphNode<T> src;
-    private GraphNode<T> dst;
+    private int dstIndex;
     private double weight;
 
-    public GraphEdge(GraphNode<T> src, GraphNode<T> dst, double weight)
+    public GraphEdge(int dstIndex, double weight)
     {
-        this.src = src;
-        this.dst = dst;
+        this.dstIndex = dstIndex;
         this.weight = weight;
     }
 
-    public GraphNode<T> GetSrc()
+    public int GetDstIndex()
     {
-        return this.src;
-    }
-
-    public GraphNode<T> GetDst()
-    {
-        return this.dst;
+        return this.dstIndex;
     }
 
     public double GetWeight()
@@ -26,8 +19,13 @@ class GraphEdge<T>
         return this.weight;
     }
 
+    public void SetDstIndex(int index)
+    {
+        this.dstIndex = index;
+    }
+
     public override string ToString()
     {
-        return string.Format("GraphEdge( {0} --{1}--> {2} )", this.GetSrc(), this.GetWeight(), this.GetDst());
+        return string.Format("GraphEdge( --{0}--> {1} )", this.GetWeight(), this.GetDstIndex());
     }
 }
